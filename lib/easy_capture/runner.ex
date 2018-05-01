@@ -1,34 +1,39 @@
-defmodule Runner do
+defmodule EasyCapture.Runner do
   use GenServer
-  @red_id = 6
-  @green_id = 7
+  @red_id 24
+  @green_id 25
 
   def start_link(red_led, green_led, red_button, green_button, writer) do
-    GenServer.start_link(__MODULE__, arg, __MODULE__)
+    GenServer.start_link(__MODULE__, [], __MODULE__)
     
-    GPIO.set_int(red_button, :falling)
-    GPIO.set_int(green_button, :falling)
-    flush
+    ElixirALE.GPIO.set_int(red_button, :falling)
+    ElixirALE.GPIO.set_int(green_button, :falling)
+    receive do
+      {:gpio_interrupt, _, _} -> true
+    end
+    receive do
+      {:gpio_interrupt, _, _} -> true
+    end
+    
+    ElixirALE.GPIO.write(red_led, 1)
 
-    GPIO.write(red_led, 1)
-
-    poll(red_led, green_led, red_button, green_button, writer)
+    poll(red_led, green_led, red_button, green_button, writer, false)
   end
 
   def poll(red_led, green_led, red_button, green_button,
-      writer, writing // false) do
-    recieve do
+      writer, writing) do
+    receive do
       {:gpio_interrupt, @red_id, :falling} when writing == false ->
-        poll(red_led, green_led, red_button, green_button, writer)
+        poll(red_led, green_led, red_button, green_button, writer, false)
       {:gpio_interrupt, @red_id, :falling} when writing == true ->
         send(writer, :stop)
-        GPIO.write(red_led, 1)
-        GPIO.write(green_led, 0)
-        poll(red_led, green_led, red_button, green_button, writer)
+        ElixirALE.GPIO.write(red_led, 1)
+        ElixirALE.GPIO.write(green_led, 0)
+        poll(red_led, green_led, red_button, green_button, writer, false)
       {:gpio_interrupt, @green_id, :falling} when writing == false ->
         send(writer, :start)
-        GPIO.write(red_led, 0)
-        GPIO.write(green_led, 1)
+        ElixirALE.GPIO.write(red_led, 0)
+        ElixirALE.GPIO.write(green_led, 1)
         poll(red_led, green_led, red_button, green_button, writer, true)
       {:gpio_interrupt, @green_id, :falling} when writing == true ->
         send(writer, :stop)
