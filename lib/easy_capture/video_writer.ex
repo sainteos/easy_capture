@@ -1,34 +1,19 @@
 defmodule EasyCapture.VideoWriter do
   use GenServer
+  require Logger
 
   def start_link(args) do
+    Logger.info fn ->
+      "VideoWriter: Video writer has been started."
+    end
     GenServer.start_link(__MODULE__, args, name: __MODULE__)
-    wait_for_input([])
-  end
-
-  def wait_for_input([]) do
-    receive do
-      {_, :start} ->
-        {:ok,  rec_pid} = spawn(start_record)
-        wait_for_input([rec_pid])
-      {_, :stop} -> 
-        wait_for_input([])
-    end
-  end 
-
-  def wait_for_input([rec_pid]) do
-    receive do
-      {_, :start} ->
-        exit(rec_pid)
-        {:ok, new_rec_pid} = spawn(start_record)
-        wait_for_input([new_rec_pid])
-      {_, :stop} ->
-         exit(rec_pid)
-         wait_for_input([])
-    end
   end
 
   def start_record() do
+    Logger.info fn ->
+      "VideoWriter: Recording has begun!"
+    end
+
     import FFmpex
     import FFmpex.Options
     import FFmpex.Options.Main
@@ -43,5 +28,29 @@ defmodule EasyCapture.VideoWriter do
         
 
     :ok = execute(command)  
+  end
+
+  def kill_record_cmd() do
+    Logger.info fn ->
+      "VideoWriter: Attempting to kill ffmpeg..."
+    end
+    System.cmd("killall",["INT", "ffmpeg"])
+  end
+
+  def init(arg) do
+    {:ok, arg}
+  end
+  
+  def handle_call(arg) do
+    {:ok, arg}
+  end
+  
+  def handle_cast(:start) do
+    kill_record_cmd()
+    spawn(EasyCapture, :start_record, [])
+  end
+
+  def handle_cast(:stop) do
+    kill_record_cmd()
   end
 end

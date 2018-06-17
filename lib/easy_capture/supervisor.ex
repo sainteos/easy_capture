@@ -1,25 +1,28 @@
 defmodule EasyCapture.Supervisor do
   use Supervisor
+  require Logger
 
   def start_link(args) do
     Supervisor.start_link(__MODULE__, args, name: __MODULE__)
-
-    {:ok, red_led_pid} = ElixirALE.GPIO.start_link(22, :output)
-    {:ok, green_led_pid} = ElixirALE.GPIO.start_link(23, :output)
-    {:ok, red_button_pid} = ElixirALE.GPIO.start_link(24, :input)
-    {:ok, green_button_pid} = ElixirALE.GPIO.start_link(25, :input)
-    {:ok, video_writer} = EasyCapture.VideoWriter.start_link([]) 
     
-    {:ok, _} = EasyCapture.Runner.start_link(red_led_pid, green_led_pid,
-      red_button_pid, green_button_pid, video_writer)
+    Logger.info fn -> 
+      "Supervisor: Supervisor has been started."
+    end
+
+    {:ok, _} = ElixirALE.GPIO.start_link(22, :input, name: RedButton)
+    {:ok, _} = ElixirALE.GPIO.start_link(23, :input, name: GreenButton)
+    {:ok, _} = ElixirALE.GPIO.start_link(24, :output, name: RedLED)
+    {:ok, _} = ElixirALE.GPIO.start_link(25, :output, name: GreenLED)
+    {:ok, _} = EasyCapture.VideoWriter.start_link([]) 
+    {:ok, _} = EasyCapture.Runner.start_link([])
   end
 
   def init(_arg) do
     children = [
-      {ElixirALE.GPIO, [22, :output]},
-      {ElixirALE.GPIO, [23, :output]},
-      {ElixirALE.GPIO, [24, :input]},
-      {ElixirALE.GPIO, [25, :input]},
+      {ElixirALE.GPIO, [22, :input, name: RedButton]},
+      {ElixirALE.GPIO, [23, :input, name: GreenButton]},
+      {ElixirALE.GPIO, [24, :output, name: RedLED]},
+      {ElixirALE.GPIO, [25, :output, name: GreenLED]},
       {EasyCapture.VideoWriter},
       {EasyCapture.Runner}
     ]
